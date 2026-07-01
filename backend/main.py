@@ -199,6 +199,7 @@ def is_online(doc: dict) -> bool:
 # ─────────────────────────────────────────────────────
 
 @app.post("/relay", response_model=RelayResponse)
+@app.post("/data", response_model=RelayResponse)
 async def relay(payload: AccountPayload, request: Request):
     # 1. Xác thực API Key
     if payload.api_key not in config.API_KEYS:
