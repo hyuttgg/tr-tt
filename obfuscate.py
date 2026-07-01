@@ -25,14 +25,15 @@ def obfuscate_lua():
         cleaned_lines.append(line)
     code = "\n".join(cleaned_lines)
 
-    # Thuật toán mã hóa: Dịch chuyển Byte (XOR với Key 2007)
+    # Thuật toán mã hóa: Dịch chuyển Byte (XOR với Key 137)
     key = 137
     encrypted_bytes = []
     for char in code:
-        # XOR char code với key
-        encrypted_bytes.append(str(ord(char) ^ key))
+        # XOR char code với key và định dạng đúng 3 chữ số để tránh lỗi gộp ký tự trong Lua
+        val = ord(char) ^ key
+        encrypted_bytes.append(f"{val:03d}")
 
-    # Chuyển đổi thành chuỗi dữ liệu trong Lua: \11\22\33...
+    # Chuyển đổi thành chuỗi dữ liệu trong Lua: \011\022\033...
     lua_data_string = "\\" + "\\".join(encrypted_bytes)
 
     # Giao diện đóng gói mã hóa có chữ ký khanh 2007 dev
