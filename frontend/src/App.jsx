@@ -155,6 +155,17 @@ function Dashboard() {
             >
               🔄 Refresh
             </button>
+            <button
+              className="btn btn-ghost"
+              onClick={() => {
+                const script = `loadstring(game:HttpGet("https://tr-tt-5.onrender.com/script?key=${user?.api_key}"))()`;
+                navigator.clipboard.writeText(script);
+                alert("Đã copy mã script vào clipboard!");
+              }}
+              style={{color: '#10b981'}}
+            >
+              📋 Copy Script
+            </button>
             <div style={{color: '#9ca3af', fontSize: '14px', marginLeft: '8px', borderLeft: '1px solid #374151', paddingLeft: '12px'}}>
               Hi, {user?.username}
             </div>

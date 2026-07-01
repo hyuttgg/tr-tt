@@ -138,9 +138,12 @@ async def register(user: UserCreate):
             raise HTTPException(status_code=400, detail="Username already registered")
             
         hashed_password = auth.get_password_hash(user.password)
+        import uuid
+        api_key = uuid.uuid4().hex
         user_dict = {
             "username": user.username,
             "hashed_password": hashed_password,
+            "api_key": api_key,
             "role": "user",
             "created_at": datetime.now(timezone.utc)
         }
@@ -165,10 +168,17 @@ async def login(user: UserLogin):
             headers={"WWW-Authenticate": "Bearer"},
         )
         
-    access_token = auth.create_access_token(
+        access_token = auth.create_access_token(
         data={"sub": user.username}
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get("/auth/me")
+async def get_me(current_user: dict = Depends(get_current_user)):
+    return {
+        "username": current_user["username"],
+        "api_key": current_user.get("api_key", "")
+    }
 
 
 # ─────────────────────────────────────────────────────
@@ -208,11 +218,13 @@ def is_online(doc: dict) -> bool:
 @app.post("/data", response_model=RelayResponse)
 async def relay(payload: AccountPayload, request: Request):
     # 1. Xác thực API Key
-    if payload.api_key not in config.API_KEYS:
+    user = await db["users"].find_one({"api_key": payload.api_key})
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid API key"
         )
+    owner = user["username"]
 
     # 2. Rate limit
     if not check_rate_limit(payload.username):
@@ -226,6 +238,7 @@ async def relay(payload: AccountPayload, request: Request):
 
     update_doc = {
         "$set": {
+            "owner":        owner,
             "username":     payload.username,
             "user_id":      payload.user_id,
             "level":        payload.level,
@@ -290,7 +303,7 @@ async def get_accounts(
     - status: "online" | "offline"
     - limit / skip: pagination
     """
-    query: dict = {}
+    query: dict = {"owner": current_user["username"]}
 
     if sea is not None:
         query["sea"] = sea
@@ -340,7 +353,7 @@ async def get_accounts(
 
 @app.get("/accounts/{username}")
 async def get_account(username: str, current_user: dict = Depends(get_current_user)):
-    doc = await db["accounts"].find_one({"username": username})
+    doc = await db["accounts"].find_one({"username": username, "owner": current_user["username"]})
     if not doc:
         raise HTTPException(status_code=404, detail=f"Account '{username}' not found")
 
@@ -359,7 +372,7 @@ async def get_online(current_user: dict = Depends(get_current_user)):
         seconds=config.OFFLINE_THRESHOLD_SECONDS
     )
     cursor = db["accounts"].find(
-        {"last_seen": {"$gte": threshold}}
+        {"owner": current_user["username"], "last_seen": {"$gte": threshold}}
     ).sort("last_seen", -1)
 
     docs = await cursor.to_list(length=500)
@@ -376,21 +389,23 @@ async def get_online(current_user: dict = Depends(get_current_user)):
 
 @app.get("/stats")
 async def get_stats(current_user: dict = Depends(get_current_user)):
-    total = await db["accounts"].count_documents({})
+    query = {"owner": current_user["username"]}
+    total = await db["accounts"].count_documents(query)
 
     threshold = datetime.now(timezone.utc) - timedelta(
         seconds=config.OFFLINE_THRESHOLD_SECONDS
     )
     online_count = await db["accounts"].count_documents(
-        {"last_seen": {"$gte": threshold}}
+        {"owner": current_user["username"], "last_seen": {"$gte": threshold}}
     )
 
-    sea1 = await db["accounts"].count_documents({"sea": 1})
-    sea2 = await db["accounts"].count_documents({"sea": 2})
-    sea3 = await db["accounts"].count_documents({"sea": 3})
+    sea1 = await db["accounts"].count_documents({"owner": current_user["username"], "sea": 1})
+    sea2 = await db["accounts"].count_documents({"owner": current_user["username"], "sea": 2})
+    sea3 = await db["accounts"].count_documents({"owner": current_user["username"], "sea": 3})
 
     # Top fruit
     pipeline = [
+        {"$match": query},
         {"$group": {"_id": "$fruit", "count": {"$sum": 1}}},
         {"$sort": {"count": -1}},
         {"$limit": 5},
@@ -402,6 +417,7 @@ async def get_stats(current_user: dict = Depends(get_current_user)):
 
     # Top race
     race_pipeline = [
+        {"$match": query},
         {"$group": {"_id": "$race", "count": {"$sum": 1}}},
         {"$sort": {"count": -1}},
         {"$limit": 5},
@@ -411,7 +427,10 @@ async def get_stats(current_user: dict = Depends(get_current_user)):
         top_races.append({"race": doc["_id"], "count": doc["count"]})
 
     # Avg level
-    avg_pipeline = [{"$group": {"_id": None, "avg_level": {"$avg": "$level"}}}]
+    avg_pipeline = [
+        {"$match": query},
+        {"$group": {"_id": None, "avg_level": {"$avg": "$level"}}}
+    ]
     avg_doc = None
     async for doc in db["accounts"].aggregate(avg_pipeline):
         avg_doc = doc
@@ -434,6 +453,22 @@ async def get_stats(current_user: dict = Depends(get_current_user)):
 @app.get("/health")
 async def health():
     return {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+
+from fastapi.responses import PlainTextResponse
+
+@app.get("/script", response_class=PlainTextResponse)
+async def get_script(key: str):
+    script_path = os.path.join(os.path.dirname(__file__), "..", "core", "sender_obfuscated.lua")
+    if not os.path.exists(script_path):
+        script_path = os.path.join(os.path.dirname(__file__), "..", "core", "sender.lua")
+        if not os.path.exists(script_path):
+            raise HTTPException(status_code=404, detail="Script not found")
+            
+    with open(script_path, "r", encoding="utf-8") as f:
+        content = f.read()
+        
+    return f'_G.BF_API_KEY = "{key}"\n\n' + content
 
 
 # ─────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { login as apiLogin, register as apiRegister, setAuthToken } from '../api';
+import { login as apiLogin, register as apiRegister, setAuthToken, fetchMe } from '../api';
 
 const AuthContext = createContext(null);
 
@@ -8,14 +8,23 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in
-    const token = localStorage.getItem('token');
-    const username = localStorage.getItem('username');
-    if (token && username) {
-      setUser({ username });
-      setAuthToken(token);
-    }
-    setLoading(false);
+    const initAuth = async () => {
+      const token = localStorage.getItem('token');
+      const username = localStorage.getItem('username');
+      if (token && username) {
+        setAuthToken(token);
+        try {
+          const me = await fetchMe();
+          setUser({ username, api_key: me.api_key });
+        } catch (err) {
+          console.error(err);
+          localStorage.removeItem('token');
+          localStorage.removeItem('username');
+        }
+      }
+      setLoading(false);
+    };
+    initAuth();
   }, []);
 
   const login = async (username, password) => {
@@ -23,8 +32,10 @@ export const AuthProvider = ({ children }) => {
       const data = await apiLogin(username, password);
       localStorage.setItem('token', data.access_token);
       localStorage.setItem('username', username);
-      setUser({ username });
       setAuthToken(data.access_token);
+      
+      const me = await fetchMe();
+      setUser({ username, api_key: me.api_key });
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };

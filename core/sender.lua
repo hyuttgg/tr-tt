@@ -25,7 +25,7 @@
 -- ═══════════════════════════════════════════════════════════════
 
 local CONFIG = {
-    API_KEY         = "BF_SECRET_2024",   -- Phải khớp với .env trên server
+    API_KEY         = _G.BF_API_KEY or "___REPLACE_ME___",   -- Nhận key từ server hoặc fallback
     UPDATE_INTERVAL = 5,                   -- Giây giữa mỗi lần gửi
     RETRY_LIMIT     = 3,                   -- Số lần retry mỗi endpoint nếu lỗi
     RETRY_DELAY     = 2,                   -- Giây chờ trước khi retry
@@ -38,7 +38,7 @@ local CONFIG = {
     ENDPOINTS = {
         {
             name = "Render Backend (Japan/HK)",
-            url  = "https://tr-tt-3.onrender.com/relay",
+            url  = "https://tr-tt-5.onrender.com/data",
         },
     },
 }

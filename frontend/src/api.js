@@ -42,7 +42,14 @@ export async function register(username, password) {
   if (!res.ok) throw new Error(data.detail || "Registration failed");
   return data;
 }
-
+export async function fetchMe() {
+  const res = await fetch(`${BASE_URL}/auth/me`, { headers: getHeaders() });
+  if (!res.ok) {
+    const err = await res.json().catch(()=>({}));
+    throw new Error(err.detail || "Failed to fetch user");
+  }
+  return res.json();
+}
 export async function fetchStats() {
   const res = await fetch(`${BASE_URL}/stats`, { headers: getHeaders() });
   if (!res.ok) {

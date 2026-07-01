@@ -42,6 +42,7 @@ class AccountPayload(BaseModel):
 # ─────────────────────────────────────────────
 
 class AccountDocument(BaseModel):
+    owner: str = ""
     username: str
     user_id: int
 
@@ -85,6 +86,7 @@ class Token(BaseModel):
 class UserDocument(BaseModel):
     username: str
     hashed_password: str
+    api_key: str = ""
     role: str = "user"
     created_at: datetime
 
