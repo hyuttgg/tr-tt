@@ -75,8 +75,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # Cho phép React dev server
-    allow_credentials=True,
+    allow_origins=["*"],   # Cho phép tất cả các nguồn truy cập
+    allow_credentials=False,  # JWT Token truyền qua Header nên không cần allow_credentials=True
     allow_methods=["*"],
     allow_headers=["*"],
 )
