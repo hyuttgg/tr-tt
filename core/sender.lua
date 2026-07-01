@@ -34,19 +34,12 @@ local CONFIG = {
 
     -- ─────────────────────────────────────────────────────────
     -- ENDPOINTS — Gửi song song đến tất cả server trong list
-    -- Thêm / bỏ endpoint tùy ý
     -- ─────────────────────────────────────────────────────────
     ENDPOINTS = {
         {
-            name = "Japan",
-            url  = "https://YOUR-JAPAN-SERVER.ap-northeast-1.example.com/relay",
+            name = "Render Backend (Japan/HK)",
+            url  = "https://tr-tt-3.onrender.com/relay",
         },
-        {
-            name = "Hong Kong",
-            url  = "https://YOUR-HK-SERVER.ap-east-1.example.com/relay",
-        },
-        -- Thêm endpoint khác ở đây nếu cần:
-        -- { name = "Singapore", url = "https://sg.example.com/relay" },
     },
 }
 

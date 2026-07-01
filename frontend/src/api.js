@@ -1,5 +1,5 @@
 // Blox Fruits Account Manager — API Service
-const BASE_URL = "http://127.0.0.1:8000";
+const BASE_URL = "https://tr-tt-3.onrender.com";
 
 export async function fetchStats() {
   const res = await fetch(`${BASE_URL}/stats`);
