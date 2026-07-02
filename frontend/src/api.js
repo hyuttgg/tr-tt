@@ -1,5 +1,5 @@
 // Blox Fruits Account Manager — API Service
-const BASE_URL = import.meta.env.VITE_API_URL || "https://tr-tt-3.onrender.com";
+const BASE_URL = import.meta.env.VITE_API_URL || "https://tr-tt-5.onrender.com";
 
 let authToken = null;
 
